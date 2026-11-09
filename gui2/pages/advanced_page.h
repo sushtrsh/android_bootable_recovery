@@ -14,6 +14,7 @@ struct advanced_page_options {
   lv_event_cb_t option_event_callback = nullptr;
   lv_event_cb_t press_guard_callback = nullptr;
   const void* file_manager_target = nullptr;
+  const void* modules_target = nullptr;
   const void* export_log_target = nullptr;
   // Null hides the row, which is what a build without Wi-Fi wants.
   const void* wifi_target = nullptr;

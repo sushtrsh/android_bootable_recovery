@@ -12,6 +12,11 @@ void build_advanced_page(const advanced_page_options& options) {
       options.content, *options.metrics, options.strings->file_manager_title,
       options.strings->file_manager_summary, options.option_event_callback,
       options.file_manager_target, options.press_guard_callback);
+  if (options.modules_target != nullptr)
+    gui2_components::create_setting_card(
+        options.content, *options.metrics, "Module Manager",
+        "Manage Magisk, KernelSU, and APatch modules", options.option_event_callback,
+        options.modules_target, options.press_guard_callback);
   if (options.sideload_target != nullptr)
     gui2_components::create_setting_card(options.content, *options.metrics,
                                          options.strings->sideload_title,

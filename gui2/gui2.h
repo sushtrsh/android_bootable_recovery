@@ -20,6 +20,7 @@
 #include "backend/sideload_backend.h"
 #include "backend/startup_backend.h"
 #include "backend/tools_backend.h"
+#include "backend/modules_backend.h"
 
 enum gui2_exit_reason {
   GUI2_EXIT_INITIALIZATION_FAILED = 1,
@@ -43,6 +44,7 @@ struct gui2_context {
   // show it checks the pointer instead of a build flag.
   gui2_backend::wifi_backend* wifi = nullptr;
   gui2_backend::file_manager_backend* file_manager = nullptr;
+  gui2_backend::modules_backend* modules = nullptr;
   gui2_backend::install_backend* install = nullptr;
   gui2_backend::sideload_backend* sideload = nullptr;
   gui2_backend::tools_backend* tools = nullptr;

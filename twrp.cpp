@@ -38,6 +38,7 @@
 #include "gui2/backend/twrp_mount_backend.h"
 #include "gui2/backend/twrp_restore_backend.h"
 #include "gui2/backend/twrp_file_manager_backend.h"
+#include "gui2/backend/twrp_modules_backend.h"
 #include "gui2/backend/twrp_install_backend.h"
 #include "gui2/backend/twrp_sideload_backend.h"
 #include "gui2/backend/twrp_terminal_backend.h"
@@ -425,11 +426,7 @@ class twrp_startup_backend final : public gui2_backend::startup_backend, public 
 	}
 
 	std::string device_label() override {
-		const std::string device = android::base::GetProperty("ro.product.device", "");
-		const std::string model = android::base::GetProperty("ro.product.model", "");
-		if (device.empty() || model.empty())
-			return device + model;
-		return device + " · " + model;
+		return android::base::GetProperty("ro.maintainer.name", "");
 	}
 
 	void step(gui2_backend::startup_step step) override {
@@ -638,6 +635,7 @@ int main(int argc, char* argv[]) {
 	gui2_backend::twrp_wifi_backend wifi_backend;
 #endif
 	gui2_backend::twrp_file_manager_backend file_manager_backend;
+	gui2_backend::twrp_modules_backend modules_backend;
 	gui2_backend::twrp_install_backend install_backend;
 	gui2_backend::twrp_sideload_backend sideload_backend;
 	gui2_backend::twrp_tools_backend tools_backend;
@@ -659,6 +657,7 @@ int main(int argc, char* argv[]) {
 	gui2_context_value.wifi = &wifi_backend;
 #endif
 	gui2_context_value.file_manager = &file_manager_backend;
+	gui2_context_value.modules = &modules_backend;
 	gui2_context_value.install = &install_backend;
 	gui2_context_value.sideload = &sideload_backend;
 	gui2_context_value.tools = &tools_backend;

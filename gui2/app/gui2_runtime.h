@@ -4,6 +4,7 @@
 #include "backend/background_backend.h"
 #include "backend/console_backend.h"
 #include "backend/file_manager_backend.h"
+#include "backend/modules_backend.h"
 #include "backend/install_backend.h"
 #include "backend/terminal_backend.h"
 #include "backend/hardware_settings.h"
@@ -36,6 +37,7 @@ struct runtime_state {
   gui2_backend::terminal_backend* terminal = nullptr;
   gui2_backend::wifi_backend* wifi = nullptr;
   gui2_backend::file_manager_backend* file_manager = nullptr;
+  gui2_backend::modules_backend* modules = nullptr;
   gui2_backend::install_backend* install = nullptr;
   gui2_backend::sideload_backend* sideload = nullptr;
   gui2_backend::startup_backend* startup = nullptr;

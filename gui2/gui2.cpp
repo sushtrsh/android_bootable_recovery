@@ -45,6 +45,7 @@
 #include "pages/action_definitions.h"
 #include "pages/action_page.h"
 #include "pages/advanced_page.h"
+#include "pages/modules_page.h"
 #include "pages/console_page.h"
 #include "pages/backup_page.h"
 #include "pages/decrypt_page.h"
@@ -115,6 +116,7 @@ static gui2_backend::restore_backend*& restore = runtime.restore;
 static gui2_backend::terminal_backend*& terminal = runtime.terminal;
 static gui2_backend::wifi_backend*& wifi = runtime.wifi;
 static gui2_backend::file_manager_backend*& file_manager = runtime.file_manager;
+static gui2_backend::modules_backend*& modules = runtime.modules;
 static gui2_backend::install_backend*& install = runtime.install;
 static gui2_backend::startup_backend*& startup = runtime.startup;
 static gui2_backend::sideload_backend*& sideload = runtime.sideload;
@@ -244,6 +246,7 @@ static void show_console_page(page_transition transition);
 static void show_export_log_page(page_transition transition);
 static void show_console_settings_page(page_transition transition);
 static void show_file_manager_page(page_transition transition);
+static void show_modules_page(page_transition transition);
 static void show_file_actions_page(page_transition transition);
 static void show_file_input_page(page_transition transition);
 static void show_wifi_page(page_transition transition);
@@ -452,6 +455,7 @@ enum class settings_target {
   KEYBOARD_SETTINGS,
   ADVANCED_WIPE,
   FILE_MANAGER,
+  MODULES,
   WIFI,
   SIDELOAD,
   FORMAT_DATA,
@@ -479,6 +483,7 @@ static constexpr settings_target general_settings_target = settings_target::GENE
 static constexpr settings_target keyboard_settings_target = settings_target::KEYBOARD_SETTINGS;
 static constexpr settings_target advanced_wipe_target = settings_target::ADVANCED_WIPE;
 static constexpr settings_target file_manager_target = settings_target::FILE_MANAGER;
+static constexpr settings_target modules_target = settings_target::MODULES;
 static constexpr settings_target wifi_target = settings_target::WIFI;
 static constexpr settings_target sideload_target = settings_target::SIDELOAD;
 static constexpr settings_target format_data_target = settings_target::FORMAT_DATA;
@@ -662,6 +667,10 @@ static void navigate_back(void) {
                   page_transition::POP);
     }
   } else if (page_router.current() == page_kind::WIFI) {
+    navigate_to(page_kind::ACTION,
+                &gui2_pages::action_definitions()[static_cast<int>(action_id::ADVANCED)],
+                page_transition::POP);
+  } else if (page_router.current() == page_kind::MODULES) {
     navigate_to(page_kind::ACTION,
                 &gui2_pages::action_definitions()[static_cast<int>(action_id::ADVANCED)],
                 page_transition::POP);
@@ -1310,6 +1319,9 @@ static void settings_option_event_cb(lv_event_t* event) {
     navigate_to(page_kind::HAPTICS);
   else if (*target == settings_target::RECORDING)
     navigate_to(page_kind::RECORDING);
+  else if (*target == settings_target::MODULES) {
+    navigate_to(page_kind::MODULES);
+  }
   else if (*target == settings_target::FILE_MANAGER) {
     page_state.install_queue.clear();
     page_state.install_from_file_manager = false;
@@ -5470,6 +5482,7 @@ static void show_action_page(const action_definition& definition, page_transitio
     advanced_options.metrics = &ui;
     advanced_options.strings = &strings();
     advanced_options.file_manager_target = &file_manager_target;
+    advanced_options.modules_target = modules != nullptr ? &modules_target : nullptr;
     // Absent from the build, or switched off for this device: no row at all.
     advanced_options.sideload_target = sideload != nullptr ? &sideload_target : nullptr;
     advanced_options.wifi_target = wifi != nullptr && wifi->available() ? &wifi_target
@@ -5500,6 +5513,90 @@ static void show_action_page(const action_definition& definition, page_transitio
     if (!available.sideload) advanced_options.sideload_target = nullptr;
     gui2_pages::build_advanced_page(advanced_options);
   }
+}
+
+static std::vector<gui2_backend::module_item> loaded_modules;
+static size_t module_to_delete = 0;
+static std::string module_delete_msg;
+
+static void module_toggle_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_VALUE_CHANGED || modules == nullptr) return;
+  uintptr_t idx = reinterpret_cast<uintptr_t>(lv_event_get_user_data(event));
+  if (idx >= loaded_modules.size()) return;
+  lv_obj_t* sw = static_cast<lv_obj_t*>(lv_event_get_target(event));
+  bool enabled = lv_obj_has_state(sw, LV_STATE_CHECKED);
+  modules->toggle_module(loaded_modules[idx].path, enabled);
+  loaded_modules[idx].enabled = enabled;
+  if (hardware != nullptr) hardware->vibrate(gui2_backend::haptic_channel::BUTTON);
+}
+
+static void module_delete_confirm_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+  lv_obj_t* overlay = static_cast<lv_obj_t*>(lv_event_get_user_data(event));
+  if (modules != nullptr && module_to_delete < loaded_modules.size()) {
+    modules->delete_module(loaded_modules[module_to_delete].path);
+  }
+  if (overlay != nullptr) lv_obj_del(overlay);
+  show_modules_page(page_transition::NONE);
+}
+
+static void module_delete_cancel_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+  lv_obj_t* overlay = static_cast<lv_obj_t*>(lv_event_get_user_data(event));
+  if (overlay != nullptr) lv_obj_del(overlay);
+}
+
+static void module_delete_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED || !accept_click(event)) return;
+  uintptr_t idx = reinterpret_cast<uintptr_t>(lv_event_get_user_data(event));
+  if (idx >= loaded_modules.size()) return;
+  module_to_delete = idx;
+
+  gui2_shell::confirm_dialog_options dlg_opt;
+  dlg_opt.metrics = &ui;
+  dlg_opt.title = "Delete Module";
+  module_delete_msg = "Are you sure you want to delete '" + loaded_modules[idx].name + "'? This will permanently remove its files.";
+  dlg_opt.body = module_delete_msg.c_str();
+  dlg_opt.cancel = strings().cancel;
+  dlg_opt.confirm = "Delete";
+  dlg_opt.cancel_callback = module_delete_cancel_cb;
+  dlg_opt.confirm_callback = module_delete_confirm_cb;
+  dlg_opt.press_guard_callback = press_cancel_guard_cb;
+  gui2_shell::create_confirm_dialog(dlg_opt);
+}
+
+static void module_mount_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED || !accept_click(event)) return;
+  if (modules != nullptr) {
+    modules->mount_data();
+  }
+  show_modules_page(page_transition::NONE);
+}
+
+static void show_modules_page(page_transition transition) {
+  create_page_scaffold(page_kind::MODULES, false, "Module Manager",
+                       "Magisk, KernelSU, and APatch", 0, transition);
+  bool data_mounted = modules != nullptr && modules->is_data_mounted();
+  if (!data_mounted && modules != nullptr) {
+    data_mounted = modules->mount_data();
+  }
+  if (modules != nullptr && data_mounted) {
+    loaded_modules = modules->get_modules();
+  } else {
+    loaded_modules.clear();
+  }
+
+  gui2_pages::modules_page_options opt;
+  opt.content = main_content;
+  opt.metrics = &ui;
+  opt.strings = &strings();
+  opt.modules = &loaded_modules;
+  opt.data_mounted = data_mounted;
+  opt.toggle_callback = module_toggle_cb;
+  opt.delete_callback = module_delete_cb;
+  opt.mount_callback = module_mount_cb;
+  opt.press_guard_callback = press_cancel_guard_cb;
+  gui2_pages::build_modules_page(opt);
 }
 
 static void show_export_log_page(page_transition transition) {
@@ -5614,6 +5711,9 @@ static void build_page(const gui2_pages::page_request& request) {
       break;
     case page_kind::KEYBOARD_SETTINGS:
       show_keyboard_settings_page(request.transition);
+      break;
+    case page_kind::MODULES:
+      show_modules_page(request.transition);
       break;
     case page_kind::FILE_MANAGER:
       show_file_manager_page(request.transition);
@@ -6437,6 +6537,7 @@ int gui2_start(const gui2_context* context) {
   terminal = context->terminal;
   wifi = context->wifi;
   file_manager = context->file_manager;
+  modules = context->modules;
   install = context->install;
   restore = context->restore;
   startup = context->startup;

@@ -85,6 +85,7 @@ cc_library_shared {
         "pages/action_definitions.cpp",
         "pages/action_page.cpp",
         "pages/advanced_page.cpp",
+        "pages/modules_page.cpp",
         "pages/console_page.cpp",
         "pages/export_log_page.cpp",
         "pages/home_page.cpp",

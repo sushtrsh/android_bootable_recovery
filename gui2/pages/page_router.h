@@ -53,6 +53,7 @@ enum class page_id {
   TOOL_CONFIRM,
   TOOL_PROGRESS,
   TOOL_INPUT,
+  MODULES,
 };
 
 struct page_request {

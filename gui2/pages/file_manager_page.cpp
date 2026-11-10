@@ -224,8 +224,10 @@ file_manager_page_view build_file_manager_page(const file_manager_page_options& 
     // The text font is a TTF without LVGL's symbol code points, so these have
     // to be the project's own art rather than LV_SYMBOL_*.
     lv_obj_t* glyph_holder = lv_obj_create(row);
-    lv_obj_set_size(glyph_holder, icon_size, icon_size);
-    gui2_core::set_surface_style(glyph_holder, metrics.card_color, LV_OPA_TRANSP);
+    const int badge_size = icon_size * 5 / 4;
+    lv_obj_set_size(glyph_holder, badge_size, badge_size);
+    gui2_core::set_surface_style(glyph_holder, tint, LV_OPA_20);
+    lv_obj_set_style_radius(glyph_holder, badge_size / 3, LV_PART_MAIN);
     lv_obj_set_style_border_width(glyph_holder, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(glyph_holder, 0, LV_PART_MAIN);
     gui2_core::disable_scrolling(glyph_holder);
@@ -244,6 +246,12 @@ file_manager_page_view build_file_manager_page(const file_manager_page_options& 
     lv_obj_set_flex_grow(name, 1);
     lv_obj_set_style_text_color(name, metrics.primary_text, LV_PART_MAIN);
     lv_obj_set_style_text_font(name, metrics.text_font, LV_PART_MAIN);
+
+    // Subtle divider at the bottom of the row for clean touch separation
+    lv_obj_set_style_border_width(row, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_side(row, LV_BORDER_SIDE_BOTTOM, LV_PART_MAIN);
+    lv_obj_set_style_border_color(row, metrics.primary_text, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(row, LV_OPA_10, LV_PART_MAIN);
     return row;
   };
 
@@ -252,17 +260,39 @@ file_manager_page_view build_file_manager_page(const file_manager_page_options& 
             options.parent_callback, nullptr);
   for (size_t i = 0; i < options.entry_count; ++i) {
     const gui2_backend::file_entry& entry = options.entries[i];
+    lv_color_t icon_tint = entry.directory ? metrics.accent : metrics.primary_text;
+    
+    // Highlight flashable package / image files
+    if (!entry.directory) {
+      const std::string& name = entry.name;
+      if (name.size() > 4 && (name.rfind(".zip") == name.size() - 4 || name.rfind(".img") == name.size() - 4)) {
+        icon_tint = metrics.accent;
+      }
+    }
+
     lv_obj_t* row =
         add_row(entry.name.c_str(), entry.directory ? &kGui2IconFolder : &kGui2IconFile,
-                entry.directory ? metrics.accent : metrics.primary_text,
+                icon_tint,
                 options.entry_indices == nullptr ? nullptr : options.entry_callback,
                 options.entry_indices == nullptr ? nullptr : &options.entry_indices[i],
                 options.entry_indices == nullptr ? nullptr : options.entry_long_press_callback);
-    if (options.show_sizes && !entry.directory) {
-      lv_obj_t* size = lv_label_create(row);
+    
+    // Tampilkan ukuran file selalu untuk file (atau jika show_sizes aktif)
+    if (!entry.directory) {
+      lv_obj_t* size_badge = lv_obj_create(row);
+      lv_obj_set_size(size_badge, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+      gui2_core::set_surface_style(size_badge, metrics.background, LV_OPA_40);
+      lv_obj_set_style_radius(size_badge, gui2_core::ui_px(6), LV_PART_MAIN);
+      lv_obj_set_style_border_width(size_badge, 0, LV_PART_MAIN);
+      lv_obj_set_style_pad_hor(size_badge, gui2_core::ui_px(8), LV_PART_MAIN);
+      lv_obj_set_style_pad_ver(size_badge, gui2_core::ui_px(3), LV_PART_MAIN);
+      gui2_core::disable_scrolling(size_badge);
+
+      lv_obj_t* size = lv_label_create(size_badge);
       lv_label_set_text(size, human_size(entry.size).c_str());
       lv_obj_set_style_text_color(size, metrics.secondary_text, LV_PART_MAIN);
       lv_obj_set_style_text_font(size, metrics.status_font, LV_PART_MAIN);
+      lv_obj_center(size);
     }
   }
   if (options.entry_count == 0 && options.empty_text != nullptr) {

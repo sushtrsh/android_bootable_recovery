@@ -167,6 +167,62 @@ file_manager_page_view build_file_manager_page(const file_manager_page_options& 
     lv_obj_scroll_to_view(last_crumb, LV_ANIM_ON);
   }
 
+  // Storage shortcuts bar (Internal, Micro SD, USB-OTG quick access)
+  if (options.storage_count > 0 && options.storage_names != nullptr && options.storage_paths != nullptr) {
+    lv_obj_t* storage_bar = lv_obj_create(view.body);
+    lv_obj_set_width(storage_bar, metrics.content_width);
+    lv_obj_set_height(storage_bar, LV_SIZE_CONTENT);
+    gui2_core::set_surface_style(storage_bar, metrics.background, LV_OPA_TRANSP);
+    lv_obj_set_style_pad_all(storage_bar, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(storage_bar, metrics.cards_top_gap / 2, LV_PART_MAIN);
+    lv_obj_set_style_border_width(storage_bar, 0, LV_PART_MAIN);
+    lv_obj_set_layout(storage_bar, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(storage_bar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(storage_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_scroll_dir(storage_bar, LV_DIR_HOR);
+    lv_obj_set_scrollbar_mode(storage_bar, LV_SCROLLBAR_MODE_OFF);
+
+    const int bar_btn_h = gui2_core::single_line_card_height() * 7 / 10;
+    const std::string cur_path = options.current_path != nullptr ? options.current_path : "";
+
+    for (size_t s = 0; s < options.storage_count; ++s) {
+      const char* s_name = options.storage_names[s];
+      const char* s_path = options.storage_paths[s];
+      if (s_name == nullptr || s_path == nullptr) continue;
+
+      bool is_active = (cur_path == s_path || (cur_path.rfind(std::string(s_path) + "/", 0) == 0));
+
+      lv_obj_t* s_chip = lv_obj_create(storage_bar);
+      lv_obj_set_height(s_chip, bar_btn_h);
+      lv_obj_set_width(s_chip, LV_SIZE_CONTENT);
+      lv_obj_set_clickable(s_chip, true);
+      lv_obj_set_style_radius(s_chip, bar_btn_h / 2, LV_PART_MAIN);
+      lv_obj_set_style_pad_hor(s_chip, gui2_core::card_inner_padding(), LV_PART_MAIN);
+      lv_obj_set_style_pad_ver(s_chip, 0, LV_PART_MAIN);
+      gui2_core::disable_scrolling(s_chip);
+      if (options.press_guard_callback != nullptr)
+        lv_obj_add_event_cb(s_chip, options.press_guard_callback, LV_EVENT_ALL, nullptr);
+      if (options.storage_callback != nullptr)
+        lv_obj_add_event_cb(s_chip, options.storage_callback, LV_EVENT_CLICKED, const_cast<char*>(s_path));
+
+      if (is_active) {
+        gui2_core::set_surface_style(s_chip, metrics.accent, LV_OPA_COVER);
+        lv_obj_set_style_border_width(s_chip, 0, LV_PART_MAIN);
+      } else {
+        gui2_core::set_surface_style(s_chip, metrics.card_color, LV_OPA_COVER);
+        lv_obj_set_style_border_width(s_chip, 1, LV_PART_MAIN);
+        lv_obj_set_style_border_color(s_chip, metrics.primary_text, LV_PART_MAIN);
+        lv_obj_set_style_border_opa(s_chip, LV_OPA_10, LV_PART_MAIN);
+      }
+
+      lv_obj_t* s_lbl = lv_label_create(s_chip);
+      lv_label_set_text(s_lbl, s_name);
+      lv_obj_set_style_text_color(s_lbl, is_active ? metrics.on_accent : metrics.primary_text, LV_PART_MAIN);
+      lv_obj_set_style_text_font(s_lbl, metrics.status_font, LV_PART_MAIN);
+      lv_obj_center(s_lbl);
+    }
+  }
+
   view.list = lv_obj_create(view.body);
   lv_obj_set_width(view.list, metrics.content_width);
   lv_obj_set_height(view.list, LV_SIZE_CONTENT);

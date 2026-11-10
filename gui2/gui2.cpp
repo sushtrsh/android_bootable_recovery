@@ -2515,6 +2515,20 @@ static void build_search_toolbar(gui2_pages::file_toolbar_view* view, const std:
 }
 
 
+static void file_manager_storage_quick_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED || !accept_click(event)) return;
+  const char* target_path = static_cast<const char*>(lv_event_get_user_data(event));
+  if (target_path == nullptr || *target_path == '\0') return;
+  change_file_manager_folder(target_path, 1);
+}
+
+static void install_storage_quick_cb(lv_event_t* event) {
+  if (lv_event_get_code(event) != LV_EVENT_CLICKED || !accept_click(event)) return;
+  const char* target_path = static_cast<const char*>(lv_event_get_user_data(event));
+  if (target_path == nullptr || *target_path == '\0') return;
+  change_install_folder(target_path, 1);
+}
+
 // direction: 1 going deeper, -1 coming back up, 0 for a plain refresh.
 static void build_file_manager_body(int direction) {
   file_manager_entries.clear();
@@ -2568,6 +2582,22 @@ static void build_file_manager_body(int direction) {
   options.parent_label = strings().fm_parent;
   options.parent_callback = file_manager_parent_cb;
   options.show_sizes = true;
+  static std::vector<gui2_backend::storage_device> fm_storages;
+  static std::vector<const char*> fm_storage_names;
+  static std::vector<const char*> fm_storage_paths;
+  fm_storages = mount == nullptr ? std::vector<gui2_backend::storage_device>() : mount->storages();
+  fm_storage_names.clear();
+  fm_storage_paths.clear();
+  for (const auto& dev : fm_storages) {
+    fm_storage_names.push_back(dev.name.c_str());
+    fm_storage_paths.push_back(dev.path.c_str());
+  }
+  options.storage_names = fm_storage_names.data();
+  options.storage_paths = fm_storage_paths.data();
+  options.storage_count = fm_storage_names.size();
+  options.current_path = page_state.file_manager_path.c_str();
+  options.storage_callback = file_manager_storage_quick_cb;
+
   options.empty_text = page_state.file_search.empty() ? nullptr : strings().search_empty;
   options.press_guard_callback = press_cancel_guard_cb;
   file_manager_view = gui2_pages::build_file_manager_page(options);
@@ -2806,6 +2836,22 @@ static void build_install_body(int direction) {
   options.show_parent_row = page_state.install_path != "/";
   options.parent_label = strings().fm_parent;
   options.parent_callback = install_parent_cb;
+  static std::vector<gui2_backend::storage_device> inst_storages;
+  static std::vector<const char*> inst_storage_names;
+  static std::vector<const char*> inst_storage_paths;
+  inst_storages = mount == nullptr ? std::vector<gui2_backend::storage_device>() : mount->storages();
+  inst_storage_names.clear();
+  inst_storage_paths.clear();
+  for (const auto& dev : inst_storages) {
+    inst_storage_names.push_back(dev.name.c_str());
+    inst_storage_paths.push_back(dev.path.c_str());
+  }
+  options.storage_names = inst_storage_names.data();
+  options.storage_paths = inst_storage_paths.data();
+  options.storage_count = inst_storage_names.size();
+  options.current_path = page_state.install_path.c_str();
+  options.storage_callback = install_storage_quick_cb;
+
   options.empty_text = page_state.install_search.empty() ? nullptr : strings().search_empty;
   options.press_guard_callback = press_cancel_guard_cb;
   install_view = gui2_pages::build_file_manager_page(options);

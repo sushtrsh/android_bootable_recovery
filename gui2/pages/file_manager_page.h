@@ -39,6 +39,13 @@ struct file_manager_page_options {
   // long press fired, and a hold as LV_EVENT_LONG_PRESSED.
   lv_event_cb_t entry_long_press_callback = nullptr;
 
+  // Storage shortcuts bar (Internal Storage, Micro SD, USB-OTG)
+  const char* const* storage_names = nullptr;
+  const char* const* storage_paths = nullptr;
+  size_t storage_count = 0;
+  const char* current_path = nullptr;
+  lv_event_cb_t storage_callback = nullptr;
+
   // File sizes on the right of each row, and what an empty list says.
   bool show_sizes = false;
   const char* empty_text = nullptr;

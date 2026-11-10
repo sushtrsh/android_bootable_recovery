@@ -2532,6 +2532,8 @@ static void build_search_toolbar(gui2_pages::file_toolbar_view* view, const std:
 }
 
 
+static void change_install_folder(const std::string& path, int direction);
+
 static void file_manager_storage_quick_cb(lv_event_t* event) {
   if (lv_event_get_code(event) != LV_EVENT_CLICKED || !accept_click(event)) return;
   const char* target_path = static_cast<const char*>(lv_event_get_user_data(event));

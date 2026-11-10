@@ -1759,6 +1759,7 @@ enum class file_action {
   CHMOD,
   RENAME,
   DELETE,
+  UNZIP,
 };
 
 static constexpr file_action file_action_terminal = file_action::OPEN_TERMINAL;
@@ -1769,6 +1770,7 @@ static constexpr file_action file_action_chmod755 = file_action::CHMOD_755;
 static constexpr file_action file_action_chmod = file_action::CHMOD;
 static constexpr file_action file_action_rename = file_action::RENAME;
 static constexpr file_action file_action_delete = file_action::DELETE;
+static constexpr file_action file_action_unzip = file_action::UNZIP;
 
 // filemanageraction: cmd "%tw_filemanager_command% "%tw_filename1%"", and
 // with tw_include_text3 the destination after it. filemanagerconfirm asks
@@ -1845,6 +1847,18 @@ static void file_action_event_cb(lv_event_t* event) {
     case file_action::DELETE:
       open_file_command(strings().fm_delete, "rm -rf", target, nullptr, true);
       return;
+    case file_action::UNZIP: {
+      // Extract target.zip into a directory next to it or named after it
+      std::string dest_dir = target;
+      if (dest_dir.size() > 4 && dest_dir.rfind(".zip") == dest_dir.size() - 4) {
+        dest_dir = dest_dir.substr(0, dest_dir.size() - 4);
+      } else {
+        dest_dir += "_extracted";
+      }
+      std::string cmd = "mkdir -p "" + dest_dir + "" && unzip -o";
+      open_file_command("Extract / Unzip Archive", cmd, target, &dest_dir, false);
+      return;
+    }
   }
 }
 
@@ -2286,6 +2300,9 @@ static void show_file_actions_page(page_transition transition) {
   options.metrics = &ui;
   options.strings = &strings();
   options.is_folder = page_state.file_selection_is_folder;
+  const std::string& sel = page_state.file_selection;
+  options.is_zip = !options.is_folder && sel.size() > 4 && sel.rfind(".zip") == sel.size() - 4;
+  options.unzip_target = &file_action_unzip;
   options.can_edit = settings != nullptr && settings->get_int("tw_include_nano", 0) != 0;
   options.edit_target = &file_action_edit;
   options.callback = file_action_event_cb;

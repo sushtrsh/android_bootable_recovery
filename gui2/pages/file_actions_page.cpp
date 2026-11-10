@@ -29,6 +29,9 @@ void build_file_actions_page(const file_actions_page_options& options) {
                                          options.press_guard_callback);
   };
 
+  // Unzip action for .zip archives
+  if (!options.is_folder && options.is_zip) card("Extract / Unzip Archive", options.unzip_target);
+
   // filemanageroptions: nano for files, the terminal for folders.
   if (!options.is_folder && options.can_edit) card(strings.fm_edit, options.edit_target);
   if (options.is_folder) card(strings.fm_open_terminal, options.terminal_target);

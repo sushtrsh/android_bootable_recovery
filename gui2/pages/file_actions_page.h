@@ -15,6 +15,10 @@ struct file_actions_page_options {
   const gui2_core::ui_metrics* metrics = nullptr;
   const gui2_i18n::language_pack* strings = nullptr;
   bool is_folder = false;
+  // Zip archive: extra action to extract/unzip
+  bool is_zip = false;
+  const void* unzip_target = nullptr;
+
   // tw_include_nano: files get "Edit with nano".
   bool can_edit = false;
   const void* edit_target = nullptr;

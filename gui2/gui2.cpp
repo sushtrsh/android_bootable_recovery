@@ -5598,11 +5598,23 @@ static void module_toggle_cb(lv_event_t* event) {
 static void module_delete_confirm_cb(lv_event_t* event) {
   if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
   lv_obj_t* overlay = static_cast<lv_obj_t*>(lv_event_get_user_data(event));
+  bool deleted = false;
+  std::string mod_name;
   if (modules != nullptr && module_to_delete < loaded_modules.size()) {
-    modules->delete_module(loaded_modules[module_to_delete].path);
+    mod_name = loaded_modules[module_to_delete].name;
+    deleted = modules->delete_module(loaded_modules[module_to_delete].path);
   }
   if (overlay != nullptr) lv_obj_del(overlay);
-  show_modules_page(page_transition::NONE);
+  if (!mod_name.empty()) {
+    if (deleted) {
+      gui2_console::write_raw(gui2_console::severity::highlight,
+                              "Module '" + mod_name + "' deleted successfully.\n");
+    } else {
+      gui2_console::write_raw(gui2_console::severity::error,
+                              "Failed to delete module '" + mod_name + "'.\n");
+    }
+  }
+  navigate_to(page_kind::CONSOLE, nullptr, page_transition::PUSH);
 }
 
 static void module_delete_cancel_cb(lv_event_t* event) {

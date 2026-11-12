@@ -1855,8 +1855,8 @@ static void file_action_event_cb(lv_event_t* event) {
       } else {
         dest_dir += "_extracted";
       }
-      std::string cmd = "mkdir -p "" + dest_dir + "" && unzip -o";
-      open_file_command("Extract / Unzip Archive", cmd, target, &dest_dir, false);
+      std::string cmd = "mkdir -p \"" + dest_dir + "\" && unzip -o -d \"" + dest_dir + "\"";  // extract zip to dest
+      open_file_command("Extract / Unzip Archive", cmd, target, nullptr, false);
       return;
     }
   }
